@@ -27,7 +27,7 @@ class TodoApp:
         self.add_button = tk.Button(root, text="➕ Aufgabe hinzufügen", command=self.add_task)
         self.add_button.pack(pady=2)
 
-        self.edit_button = tk.Button(root, text="✏️ Aufgabe bearbeiten", command=self.edit_task)
+        self.edit_button = tk.Button(root, text=👷🏽" Aufgabe bearbeiten", command=self.edit_task)
         self.edit_button.pack(pady=2)
 
         self.save_edit_button = tk.Button(root, text="💾 Änderung speichern", command=self.save_edited_task)
