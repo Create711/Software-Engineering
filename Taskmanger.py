@@ -122,8 +122,11 @@ class TodoApp:
 
     def load_tasks(self, filename):
         if os.path.exists(filename):
-            with open(filename, "r") as f:
-                return json.load(f)
+            try:
+                with open(filename, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return []
         return []
 
     def save_tasks(self, tasks, filename):
