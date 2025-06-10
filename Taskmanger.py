@@ -8,6 +8,11 @@ import json
 from datetime import datetime, timedelta
 import tkinter.font as tkFont
 
+try:
+    from tkcalendar import Calendar
+except ImportError:
+    Calendar = None  # Calendar will not be available if tkcalendar is not installed
+
 TODO_FILE = "todo.json"
 DONE_FILE = "done.json"
 
@@ -36,6 +41,14 @@ class TodoApp:
                   background=[("active", "#2563eb"), ("!active", "#4f8cff")],
                   foreground=[("active", "#fff")])
 
+        # Menü für Multi-Window
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        window_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Fenster", menu=window_menu)
+        window_menu.add_command(label="Kalender öffnen", command=self.open_calendar_window)
+        window_menu.add_command(label="Neues Aufgabenfenster", command=self.open_new_task_window)
+
         # Haupt-Frame als ttk.Frame
         main_frame = ttk.Frame(root, style="TFrame")
         main_frame.pack(padx=30, pady=30, fill=tk.BOTH, expand=True)
@@ -57,6 +70,8 @@ class TodoApp:
         self.edit_button.grid(row=1, column=1, pady=10, sticky="ew", padx=5)
         self.save_edit_button = ttk.Button(input_frame, text="💾 Speichern", command=self.save_edited_task, style="TButton")
         self.save_edit_button.grid(row=1, column=2, pady=10, sticky="ew")
+        self.calendar_button = ttk.Button(input_frame, text="Kalender anzeigen", command=self.show_task_calendar, style="TButton")
+        self.calendar_button.grid(row=1, column=3, pady=10, sticky="ew", padx=5)
 
         ttk.Label(card, text="📋 Offene Aufgaben", style="TLabel").pack(anchor="w", padx=20, pady=(10, 0))
         listbox_frame = ttk.Frame(card, style="TFrame")
@@ -121,6 +136,64 @@ class TodoApp:
         self.minute_spinbox.pack(side=tk.LEFT)
         self.minute_spinbox.delete(0, tk.END)
         self.minute_spinbox.insert(0, now.strftime("%M"))
+
+    def open_calendar_window(self):
+        if Calendar is None:
+            messagebox.showerror("Fehler", "tkcalendar ist nicht installiert.\nInstalliere es mit: pip install tkcalendar")
+            return
+        cal_win = tk.Toplevel(self.root)
+        cal_win.title("Kalender")
+        cal_win.geometry("400x400")
+        cal = Calendar(cal_win, selectmode='day', date_pattern='yyyy-mm-dd')
+        cal.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+
+        def set_date():
+            selected = cal.get_date()
+            self.selected_date.set(selected)
+            cal_win.destroy()
+        ttk.Button(cal_win, text="Datum übernehmen", command=set_date).pack(pady=10)
+
+    def open_new_task_window(self):
+        win = tk.Toplevel(self.root)
+        win.title("Neues Aufgabenfenster")
+        win.geometry("500x300")
+        font = tkFont.Font(family="Segoe UI", size=14)
+        entry = ttk.Entry(win, width=40, font=font)
+        entry.pack(pady=20)
+
+        # Kalender-Button im neuen Aufgabenfenster
+        if Calendar is not None:
+            def open_win_calendar():
+                cal_win = tk.Toplevel(win)
+                cal_win.title("Kalender")
+                cal_win.geometry("400x400")
+                cal = Calendar(cal_win, selectmode='day', date_pattern='yyyy-mm-dd')
+                cal.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+                def set_date():
+                    selected = cal.get_date()
+                    entry.delete(0, tk.END)
+                    entry.insert(0, selected)
+                    cal_win.destroy()
+                ttk.Button(cal_win, text="Datum übernehmen", command=set_date).pack(pady=10)
+            ttk.Button(win, text="Kalender öffnen", command=open_win_calendar).pack(pady=5)
+
+        ttk.Button(win, text="Hinzufügen", command=lambda: self.add_task_from_window(entry, win)).pack(pady=10)
+
+    def add_task_from_window(self, entry, win):
+        title = entry.get()
+        if not title:
+            messagebox.showwarning("Warnung", "Bitte eine Aufgabe eingeben!", parent=win)
+            return
+        due_str = self.get_due_datetime_str()
+        if not due_str:
+            messagebox.showwarning("Fehler", "Ungültige Fälligkeit!", parent=win)
+            return
+        task = {"title": title, "due": due_str}
+        self.tasks.append(task)
+        self.save_tasks(self.tasks, TODO_FILE)
+        self.edit_index = None
+        self.update_listboxes()
+        win.destroy()
 
     def load_tasks(self, filename):
         if os.path.exists(filename):
@@ -262,6 +335,45 @@ class TodoApp:
         else:
             self.add_button.state(['!disabled'])
             self.save_edit_button.state(['disabled'])
+
+    def show_task_calendar(self):
+        if Calendar is None:
+            messagebox.showerror("Fehler", "tkcalendar ist nicht installiert.\nInstalliere es mit: pip install tkcalendar")
+            return
+        cal_win = tk.Toplevel(self.root)
+        cal_win.title("Aufgaben-Kalender")
+        cal_win.geometry("500x500")
+        cal = Calendar(cal_win, selectmode='day', date_pattern='yyyy-mm-dd')
+        cal.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+
+        # Aufgaben-Tage markieren
+        task_dates = {}
+        for task in self.tasks:
+            date = task['due'][:10]
+            if date not in task_dates:
+                task_dates[date] = []
+            task_dates[date].append(task['title'])
+            # Markiere das Datum im Kalender
+            cal.calevent_create(datetime.strptime(date, "%Y-%m-%d"), "Aufgabe", "task")
+
+        cal.tag_config('task', background="#4f8cff", foreground="white")
+
+        # Aufgabenliste für gewählten Tag anzeigen
+        task_listbox = tk.Listbox(cal_win, font=self.font)
+        task_listbox.pack(fill=tk.BOTH, expand=False, padx=20, pady=(0, 20))
+
+        def show_tasks_for_day(event):
+            sel_date = cal.get_date()
+            task_listbox.delete(0, tk.END)
+            if sel_date in task_dates:
+                for t in task_dates[sel_date]:
+                    task_listbox.insert(tk.END, t)
+            else:
+                task_listbox.insert(tk.END, "Keine Aufgaben an diesem Tag.")
+
+        cal.bind("<<CalendarSelected>>", show_tasks_for_day)
+        # Zeige Aufgaben für das heutige Datum direkt an
+        show_tasks_for_day(None)
 
 if __name__ == "__main__":
     root = tk.Tk()
