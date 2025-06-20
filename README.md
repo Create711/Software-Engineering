@@ -5,7 +5,7 @@ Dies ist ein einfacher Aufgabenplaner, entwickelt im Rahmen des Software Enginee
 ## Projektbeschreibung
 Mit dem Aufgabenplaner können Aufgaben erstellt, als **„offen“** oder **„erledigt“** markiert und verwaltet werden. Ziel ist es, eine minimalistische und funktionale Lösung für die Aufgabenorganisation zu bieten.
 
-## Features
+## Main features
 - Neue Aufgaben hinzufügen  
 - Aufgabenstatus zwischen **„offen“** und **„erledigt“** umschalten  
 - Aufgabenliste anzeigen  
