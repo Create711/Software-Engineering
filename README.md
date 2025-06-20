@@ -9,4 +9,4 @@ Mit dem Aufgabenplaner können Aufgaben erstellt, als **„offen“** oder **„
 - Neue Aufgaben hinzufügen  
 - Aufgabenstatus zwischen **„offen“** und **„erledigt“** umschalten  
 - Aufgabenliste anzeigen  
-- Daten werden lokal gespeichert (z. B. als `.json`-Datei)
+- Daten werden lokal gespeichert (als `.json`-Datei)
